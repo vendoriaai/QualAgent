@@ -33,10 +33,10 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 3 — LLM Layer (Tasks 3.1–3.4)
 
-- [ ] 3.1 `llm/base.py`: `LLMProvider` protocol — `complete(messages, *, schema: dict, temperature, seed) -> LLMResult(text, model, tokens, raw)`.
-- [ ] 3.2 Providers: `openai_provider.py` (JSON-schema response format), `anthropic_provider.py` (tool-use forced JSON), `gemini_provider.py` (response_schema), `ollama_provider.py` (format=json via /api/chat). Each records exact model string.
-- [ ] 3.3 `llm/structured.py`: `structured_call()` — validate against schema; on failure, one corrective retry appending the validation error; second failure raises `LLMValidationFailed`. Emit `llm.call` audit event per attempt (hash prompts when provider is remote).
-- [ ] 3.4 Fake provider for tests: scripted responses from YAML cassettes; record/replay support for golden tests.
+- [x] 3.1 `llm/base.py`: `LLMProvider` protocol — `complete(messages, *, schema: dict, temperature, seed) -> LLMResult(text, model, tokens, raw)`.
+- [x] 3.2 Providers: `openai_provider.py` (JSON-schema response format), `anthropic_provider.py` (tool-use forced JSON), `gemini_provider.py` (response_schema), `ollama_provider.py` (format=json via /api/chat). Each records exact model string.
+- [x] 3.3 `llm/structured.py`: `structured_call()` — validate against schema; on failure, one corrective retry appending the validation error; second failure raises `LLMValidationFailed`. Emit `llm.call` audit event per attempt (hash prompts when provider is remote).
+- [x] 3.4 Fake provider for tests: scripted responses from YAML cassettes; record/replay support for golden tests.
 - **Acceptance:** unit tests for retry logic (valid-first-try, repair-once, double-failure); no-network test proves Ollama path works with mocked socket; remote providers raise `REMOTE_PROVIDER_NOT_ACCEPTED` without the gate flag.
 
 ## Phase 4 — Pack Engine & Coding Pipeline (Tasks 4.1–4.6)

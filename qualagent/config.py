@@ -200,9 +200,19 @@ def assert_remote_allowed(config: QualAgentConfig, *, cli_accepted: bool = False
     )
 
 
+#: Env var names per provider; gemini's key comes from QUALAGENT_GOOGLE_API_KEY
+#: per 04_DATA_MODEL section 4.
+_API_KEY_ENV = {
+    "openai": "QUALAGENT_OPENAI_API_KEY",
+    "anthropic": "QUALAGENT_ANTHROPIC_API_KEY",
+    "gemini": "QUALAGENT_GOOGLE_API_KEY",
+}
+
+
 def get_api_key(provider: str) -> str | None:
     """Return the API key for a provider from the environment, if set."""
-    return os.environ.get(f"QUALAGENT_{provider.upper()}_API_KEY")
+    var = _API_KEY_ENV.get(provider, f"QUALAGENT_{provider.upper()}_API_KEY")
+    return os.environ.get(var)
 
 
 def get_ollama_host() -> str:

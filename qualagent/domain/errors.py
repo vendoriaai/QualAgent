@@ -49,6 +49,12 @@ class LLMValidationFailed(QualAgentError):
     error_code = "LLM_VALIDATION_FAILED"
 
 
+class LLMProviderError(QualAgentError):
+    """Raised when an LLM provider call fails (transport or API error)."""
+
+    error_code = "LLM_PROVIDER_ERROR"
+
+
 class RemoteProviderNotAccepted(QualAgentError):
     """Raised when a remote provider is used without explicit user consent (TAD D8)."""
 
