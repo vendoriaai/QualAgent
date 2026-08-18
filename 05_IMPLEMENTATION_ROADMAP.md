@@ -41,12 +41,12 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 4 — Pack Engine & Coding Pipeline (Tasks 4.1–4.6)
 
-- [ ] 4.1 `packs/loader.py`: discovery (builtin + project), validation per 04_DATA_MODEL §3 rules, version pinning.
-- [ ] 4.2 `packs/engine.py`: render pack → system prompt (instructions + category tree + decision questions + few-shots) and expose `output_schema`.
-- [ ] 4.3 `services/memory_service.py`: ChromaDB per project; `add_correction()`, `retrieve(query, k)`; embedding via sentence-transformers, offline.
-- [ ] 4.4 `services/codebook_service.py`: draft/refine/lock lifecycle; new-code proposals become draft suggestions only; lock snapshots.
-- [ ] 4.5 `services/coding_service.py`: pipeline per 02_TAD §6 — batching by count and token budget, prompt assembly (pack prompt + code definitions + top-k memories + segments with ids), structured call, persist assignments, flag failures, run stats.
-- [ ] 4.6 CLI: `code run`, `code status`, `packs list/show`, `codebook show/refine/lock`.
+- [x] 4.1 `packs/loader.py`: discovery (builtin + project), validation per 04_DATA_MODEL §3 rules, version pinning.
+- [x] 4.2 `packs/engine.py`: render pack → system prompt (instructions + category tree + decision questions + few-shots) and expose `output_schema`.
+- [x] 4.3 `services/memory_service.py`: ChromaDB per project; `add_correction()`, `retrieve(query, k)`; embedding via ChromaDB's built-in ONNX MiniLM (offline, ADR-001), sentence-transformers optional.
+- [x] 4.4 `services/codebook_service.py`: draft/refine/lock lifecycle; new-code proposals become draft suggestions only; lock snapshots.
+- [x] 4.5 `services/coding_service.py`: pipeline per 02_TAD §6 — batching by count and token budget, prompt assembly (pack prompt + code definitions + top-k memories + segments with ids), structured call, persist assignments, flag failures, run stats.
+- [x] 4.6 CLI: `code run`, `code status`, `packs list/show`, `codebook show/refine/lock`.
 - **Acceptance:** end-to-end integration test — fixture interview, `open_coding` pack, fake LLM cassette → assignments persisted with rationale/confidence, audit trail complete, flagged segments on double validation failure; `qualagent code run` demo works offline with cassette mode (`--llm fake`).
 
 ## Phase 5 — Review, IRR & Exports (Tasks 5.1–5.5)

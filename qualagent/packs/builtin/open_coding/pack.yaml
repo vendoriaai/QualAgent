@@ -1,0 +1,77 @@
+name: open_coding
+version: 1.0.0
+title: "Open / Descriptive Coding"
+citation: "Saldana, J. (2021). The Coding Manual for Qualitative Researchers (4th ed.). SAGE."
+multi_code: true
+unit: segment
+category_tree:
+  descriptive:
+    description: "Codes capturing the surface content of the segment"
+    children:
+      action:
+        description: "What participants report doing or experiencing"
+      context:
+        description: "Setting, time, place, or situation surrounding the action"
+      perspective:
+        description: "Participant stance, belief, or evaluation toward the action"
+  process:
+    description: "Codes for sequences, changes, or causal accounts"
+    children:
+      change:
+        description: "Reported change over time or contrast between states"
+      strategy:
+        description: "Deliberate approaches participants describe"
+coding_instructions: |
+  You are performing initial open coding (Saldana 2021) on qualitative data.
+  For each segment: (1) read closely and identify the salient actions,
+  contexts, perspectives, and processes; (2) assign one or more short,
+  evocative codes (1-4 words, snake_case) that stay close to the data -
+  prefer in-vivo wording from the participant; (3) when the segment suggests
+  a concept not in the codebook, propose a new code with a clear definition
+  instead of forcing an existing code; (4) mark segments that are too short,
+  ambiguous, or off-topic as uncodable rather than guessing.
+decision_questions:
+  - "What is this segment about, in the participant's own terms?"
+  - "Who is doing what, and in what context?"
+  - "Is there a stance, feeling, or evaluation being expressed?"
+  - "Does an existing code fit exactly, or does this need a new code?"
+output_schema:
+  type: object
+  required: [results]
+  properties:
+    results:
+      type: array
+      items:
+        type: object
+        required: [segment_id, assignments]
+        properties:
+          segment_id: {type: string}
+          assignments:
+            type: array
+            items:
+              type: object
+              required: [code, rationale, confidence]
+              properties:
+                code: {type: string}
+                rationale: {type: string}
+                confidence: {type: number, minimum: 0, maximum: 1}
+          uncodable: {type: boolean}
+    new_code_proposals:
+      type: array
+      items:
+        type: object
+        required: [name]
+        properties:
+          name: {type: string}
+          definition: {type: string}
+          example_segment_id: {type: string}
+few_shot_examples:
+  - input: "I started setting aside an hour every evening just to review vocabulary."
+    output:
+      - {code: "review_routine", rationale: "Participant describes a deliberate daily practice routine for vocabulary review", confidence: 0.9}
+  - input: "Honestly, the group work stressed me out at first, but it got easier."
+    output:
+      - {code: "initial_anxiety", rationale: "Reports stress response at the beginning of group work", confidence: 0.85}
+      - {code: "adaptation_over_time", rationale: "Explicit contrast between 'at first' and later ease", confidence: 0.8}
+  - input: "Um, I don't know, it was fine I guess."
+    output: []

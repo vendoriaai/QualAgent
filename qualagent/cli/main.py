@@ -32,6 +32,12 @@ app = typer.Typer(
 )
 config_app = typer.Typer(help="View or edit configuration.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
+code_app = typer.Typer(help="Run and inspect coding runs.", no_args_is_help=True)
+app.add_typer(code_app, name="code")
+codebook_app = typer.Typer(help="Manage the codebook.", no_args_is_help=True)
+app.add_typer(codebook_app, name="codebook")
+packs_app = typer.Typer(help="List methodology packs.", no_args_is_help=True)
+app.add_typer(packs_app, name="packs")
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
@@ -175,18 +181,133 @@ def config_set(
     console.print(f"[green]Set[/green] {key} = {node[parts[-1]]!r} in {config_path}")
 
 
-def _parse_value(raw: str) -> Any:
-    lowered = raw.strip().lower()
-    if lowered in {"true", "false"}:
-        return lowered == "true"
+@code_app.command("run")
+def code_run(
+    ctx: typer.Context,
+    pack: Annotated[str | None, typer.Option("--pack", help="Pack name@version")] = None,
+    codebook_version: Annotated[
+        int | None, typer.Option("--codebook", help="Codebook version to code against")
+    ] = None,
+    batch_size: Annotated[int | None, typer.Option("--batch-size", min=1)] = None,
+    accept_remote: Annotated[
+        bool, typer.Option("--accept-remote", help="Consent to send data to a hosted provider")
+    ] = False,
+    llm: Annotated[
+        str, typer.Option("--llm", help="Provider: config default | ollama | openai | fake")
+    ] = "config",
+    cassette: Annotated[
+        Path | None,
+        typer.Option("--cassette", help="YAML cassette for --llm fake (also: record:PATH)"),
+    ] = None,
+    document_id: Annotated[str | None, typer.Option("--document")] = None,
+) -> None:
+    """Execute a coding run over pending segments."""
     try:
-        return int(raw)
-    except ValueError:
-        pass
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    as_json: bool = ctx.obj["json"]
+    from qualagent.llm.base import LLMProvider
+    from qualagent.llm.factory import create_provider
+    from qualagent.llm.fake import FakeProvider
+    from qualagent.services.codebook_service import CodebookService
+    from qualagent.services.coding_service import CodingService
+
+    provider: LLMProvider
+    record_path: Path | None = None
     try:
-        return float(raw)
-    except ValueError:
-        return raw
+        if llm == "fake":
+            kwargs: dict[str, Any] = {}
+            if cassette is not None:
+                if str(cassette).startswith("record:"):
+                    record_path = Path(str(cassette)[7:])
+                else:
+                    kwargs["cassette_path"] = cassette
+            provider = FakeProvider(**kwargs)
+        else:
+            config = pctx.config if llm == "config" else load_config(project_dir=None)
+            provider = create_provider(config, cli_accepted_remote=accept_remote)
+        session = pctx.session()
+        audit = AuditService(session, pctx.project.id)
+        books = CodebookService(session, audit)
+        books.ensure_codebook(pctx.project)
+        pack_name = pack or (pctx.project.active_pack or "open_coding").split("@")[0]
+        from qualagent.packs.loader import load_pack as _load_pack
+
+        loaded_pack = _load_pack(pack_name, project_packs_dir=pctx.project_dir / "packs")
+        run = CodingService(session, audit, books, None, provider, pctx.config).start_run(
+            pctx.project,
+            loaded_pack,
+            codebook_version=codebook_version,
+            batch_size=batch_size,
+            document_id=document_id,
+        )
+        stats = json.loads(run.stats_json or "{}")
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    finally:
+        if llm != "fake" and not isinstance(provider, FakeProvider):
+            provider.close()
+    payload = {"run_id": run.id, "status": run.status, "stats": stats}
+    if record_path is not None:
+        payload["recorded_cassette"] = str(record_path)
+    if as_json:
+        console.print_json(json.dumps(payload))
+    else:
+        console.print(f"[green]run[/green] {run.id} -> {run.status}")
+        table = Table(title="Run stats")
+        table.add_column("Metric")
+        table.add_column("Value")
+        for key, value in stats.items():
+            table.add_row(key, str(value))
+        console.print(table)
+
+
+@code_app.command("status")
+def code_status(
+    ctx: typer.Context,
+    run_id: Annotated[str, typer.Argument(help="Coding run id")],
+) -> None:
+    """Show a coding run's progress/stats."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.llm.fake import FakeProvider
+    from qualagent.services.coding_service import CodingService
+
+    with pctx.session() as session:
+        try:
+            run = CodingService(
+                session,
+                AuditService(session, pctx.project.id),
+                None,
+                None,
+                FakeProvider([]),
+                pctx.config,
+            ).get_run(run_id)
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+        stats = json.loads(run.stats_json or "{}")
+    if ctx.obj["json"]:
+        console.print_json(
+            json.dumps(
+                {
+                    "run_id": run.id,
+                    "status": run.status,
+                    "pack": run.pack,
+                    "model": run.model,
+                    "stats": stats,
+                }
+            )
+        )
+    else:
+        console.print(f"run {run.id}: [bold]{run.status}[/bold] pack={run.pack} model={run.model}")
+        console.print_json(run.stats_json or "{}")
 
 
 @app.command()
@@ -317,6 +438,178 @@ def segment(
         console.print(
             f"[green]re-segmented[/green] {document_id} with {strategy} -> {len(segments)} segments"
         )
+
+
+def _parse_value(raw: str) -> Any:
+    lowered = raw.strip().lower()
+    if lowered in {"true", "false"}:
+        return lowered == "true"
+    try:
+        return int(raw)
+    except ValueError:
+        pass
+    try:
+        return float(raw)
+    except ValueError:
+        return raw
+
+
+@codebook_app.command("show")
+def codebook_show(
+    ctx: typer.Context,
+    version: Annotated[int | None, typer.Option("--version", help="Codebook version")] = None,
+) -> None:
+    """Print the codebook (with codes) as Markdown or JSON."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.codebook_service import CodebookService
+
+    with pctx.session() as session:
+        books = CodebookService(session, AuditService(session, pctx.project.id))
+        try:
+            book = books.get_by_version(pctx.project.id, version)
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+        codes = books.codes(book)
+        if ctx.obj["json"]:
+            console.print_json(
+                json.dumps(
+                    {
+                        "id": book.id,
+                        "version": book.version,
+                        "status": book.status,
+                        "codes": [
+                            {
+                                "name": c.name,
+                                "definition": c.definition,
+                                "inclusion": c.inclusion_criteria,
+                                "exclusion": c.exclusion_criteria,
+                            }
+                            for c in codes
+                        ],
+                    }
+                )
+            )
+        else:
+            console.print(f"# Codebook v{book.version} ({book.status})")
+            for c in codes:
+                marker = " [dim](suggestion)[/dim]" if c.name.startswith("suggestion_") else ""
+                console.print(f"- [bold]{c.name}[/bold]{marker}: {c.definition}")
+
+
+@codebook_app.command("refine")
+def codebook_refine(
+    ctx: typer.Context,
+    from_suggestions: Annotated[
+        bool, typer.Option("--from-suggestions", help="Promote AI suggestions to codes")
+    ] = False,
+) -> None:
+    """Create a refined codebook version (Braun & Clarke phase 3)."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.codebook_service import CodebookService
+
+    with pctx.session() as session:
+        books = CodebookService(session, AuditService(session, pctx.project.id))
+        try:
+            book = books.refine(pctx.project, from_suggestions=from_suggestions)
+            version, status = book.version, book.status
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+    if ctx.obj["json"]:
+        console.print_json(json.dumps({"version": version, "status": status}))
+    else:
+        console.print(f"[green]refined[/green] -> codebook v{version}")
+
+
+@codebook_app.command("lock")
+def codebook_lock(
+    ctx: typer.Context,
+    version: Annotated[int | None, typer.Option("--version", help="Version to lock")] = None,
+) -> None:
+    """Lock a codebook version (snapshots it)."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.codebook_service import CodebookService
+
+    with pctx.session() as session:
+        books = CodebookService(session, AuditService(session, pctx.project.id))
+        try:
+            book = books.lock(pctx.project, version)
+            version_, status = book.version, book.status
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+    if ctx.obj["json"]:
+        console.print_json(json.dumps({"version": version_, "status": status}))
+    else:
+        console.print(f"[green]locked[/green] codebook v{version_}")
+
+
+@packs_app.command("list")
+def packs_list(ctx: typer.Context) -> None:
+    """List builtin + project packs."""
+    from qualagent.packs.loader import discover_packs
+
+    project_dir: Path = ctx.obj["project_dir"]
+    dirs = discover_packs(project_dir / "packs" if project_dir.exists() else None)
+    if ctx.obj["json"]:
+        console.print_json(json.dumps(sorted(dirs)))
+    else:
+        table = Table(title="Methodology packs")
+        table.add_column("name")
+        table.add_column("origin")
+        for name in sorted(dirs):
+            origin = "project" if (project_dir / "packs" / name).exists() else "builtin"
+            table.add_row(name, origin)
+        console.print(table)
+
+
+@packs_app.command("show")
+def packs_show(
+    ctx: typer.Context,
+    name: Annotated[str, typer.Argument(help="Pack name (optionally name@version)")],
+) -> None:
+    """Show pack details (citation, taxonomy, questions)."""
+    from qualagent.packs.loader import load_pack
+
+    project_dir: Path = ctx.obj["project_dir"]
+    try:
+        pack = load_pack(
+            name, project_packs_dir=project_dir / "packs" if project_dir.exists() else None
+        )
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    if ctx.obj["json"]:
+        console.print_json(
+            json.dumps(
+                {
+                    "id": pack.id,
+                    "title": pack.title,
+                    "citation": pack.citation,
+                    "multi_code": pack.multi_code,
+                    "categories": pack.category_paths(),
+                }
+            )
+        )
+    else:
+        console.print(f"[bold]{pack.title}[/bold] ({pack.id})")
+        console.print(f"citation: {pack.citation}")
+        console.print("categories:")
+        for path in pack.category_paths():
+            console.print(f"  - {path}")
 
 
 if __name__ == "__main__":
