@@ -1,0 +1,131 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "qualagent"
+version = "1.0.0"
+description = "Methodology-faithful AI agent for qualitative data analysis - with a full audit trail."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "QualAgent contributors" }]
+keywords = [
+    "qualitative-research",
+    "thematic-analysis",
+    "nvivo-alternative",
+    "mcp-server",
+    "llm-agent",
+    "research-tools",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "mcp>=1.2",
+    "sqlmodel>=0.0.22",
+    "chromadb>=0.5",
+    "pydantic>=2.7",
+    "python-docx>=1.1",
+    "pypdf>=4.2",
+    "srt>=3.5",
+    "pyyaml>=6.0",
+    "tomli-w>=1.0",
+    "pandas>=2.2",
+    "openpyxl>=3.1",
+    "reportlab>=4.2",
+    "scikit-learn>=1.5",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Optional heavier embedding backend; ONNX MiniLM-L6-v2 ships by default via chromadb (ADR-001).
+sentence-transformers = ["sentence-transformers>=2.7"]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "respx>=0.21",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+qualagent = "qualagent.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/qualagent/qualagent"
+Documentation = "https://github.com/qualagent/qualagent/tree/main/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["qualagent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["qualagent", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "C4",  # comprehensions
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501", # line length enforced by formatter where possible; long prompts/docstrings allowed
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B008"]  # Typer/FastAPI function calls in defaults are idiomatic
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["qualagent.domain.*", "qualagent.services.*", "qualagent.llm.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+# Third-party packages without type stubs.
+module = [
+    "chromadb.*",
+    "srt.*",
+    "docx.*",
+    "sklearn.*",
+    "pypdf.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: tests that call real LLM providers (excluded from CI)",
+]
+addopts = "-m 'not live'"
+
+[tool.coverage.run]
+source = ["qualagent/domain", "qualagent/services", "qualagent/llm"]
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
