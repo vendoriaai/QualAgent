@@ -25,10 +25,10 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 2 — Ingestion & Segmentation (Tasks 2.1–2.4)
 
-- [ ] 2.1 `services/ingestion_service.py`: parse TXT, DOCX (python-docx), PDF (pypdf), SRT (srt, strip timestamps, keep speaker if present), CSV (column `text`, optional `speaker`). Normalize Unicode (NFC), compute SHA-256 of original bytes.
-- [ ] 2.2 `services/segmentation_service.py`: four strategies — `sentence` (regex-based, abbreviation-safe), `paragraph` (double-newline), `utterance` (single newline), `turns` (interview format `Speaker:` prefixes). All compute `start_offset`/`end_offset` into `raw_text`; record `segmenter_version`.
-- [ ] 2.3 Invariant test: for every segment, `document.raw_text[s.start_offset:s.end_offset]` round-trips and is non-empty.
-- [ ] 2.4 CLI: `init`, `import`, `segment` per 03_API_SPEC §2 with Rich progress output.
+- [x] 2.1 `services/ingestion_service.py`: parse TXT, DOCX (python-docx), PDF (pypdf), SRT (srt, strip timestamps, keep speaker if present), CSV (column `text`, optional `speaker`). Normalize Unicode (NFC), compute SHA-256 of original bytes. *(fixtures generated at test time; no binary blobs in repo)*
+- [x] 2.2 `services/segmentation_service.py`: four strategies — `sentence` (regex-based, abbreviation-safe), `paragraph` (double-newline), `utterance` (single newline), `turns` (interview format `Speaker:` prefixes). All compute `start_offset`/`end_offset` into `raw_text`; record `segmenter_version`.
+- [x] 2.3 Invariant test: for every segment, `document.raw_text[s.start_offset:s.end_offset]` round-trips and is non-empty.
+- [x] 2.4 CLI: `init`, `import`, `segment` per 03_API_SPEC §2 with Rich progress output.
 - **Acceptance:** `qualagent init demo && qualagent import fixtures/interview.docx` prints document id + segment count; offsets invariant test passes on all fixture files (create 5 fixtures: txt, docx, pdf, srt, csv).
 
 ## Phase 3 — LLM Layer (Tasks 3.1–3.4)

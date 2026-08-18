@@ -16,8 +16,14 @@ from rich.console import Console
 from rich.table import Table
 
 from qualagent import __version__
-from qualagent.config import config_to_dict, load_config
+from qualagent.config import config_to_dict, global_config_dir, load_config
 from qualagent.domain.errors import QualAgentError, ValidationError
+from qualagent.runtime import open_project
+from qualagent.services.audit_service import AuditService
+from qualagent.services.ingestion_service import IngestionService
+from qualagent.services.segmentation_service import STRATEGIES, SegmentationService
+from qualagent.storage.files import FileStore
+from qualagent.storage.registry import ProjectRegistry
 
 app = typer.Typer(
     name="qualagent",
@@ -29,6 +35,15 @@ app.add_typer(config_app, name="config")
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
+
+#: Maps domain error codes to CLI exit codes (03_API_SPEC section 2).
+_EXIT_CODES = {
+    "CONFLICT": 2,
+    "VALIDATION_ERROR": 3,
+    "LLM_VALIDATION_FAILED": 4,
+    "REMOTE_PROVIDER_NOT_ACCEPTED": 5,
+    "CODEBOOK_LOCKED": 6,
+}
 
 ProjectDir = Annotated[
     Path,
@@ -70,7 +85,24 @@ def main(
 def _fail(exc: QualAgentError) -> None:
     """Print a structured CLI error and exit with the code from 03_API_SPEC."""
     err_console.print(f"[red]error[/red] {exc.error_code}: {exc}")
-    raise typer.Exit(code=1)
+    raise typer.Exit(code=_EXIT_CODES.get(exc.error_code, 1))
+
+
+def _registry() -> ProjectRegistry:
+    """The machine-level project registry."""
+    return ProjectRegistry(global_config_dir() / "registry.json")
+
+
+def _ingestion(ctx: typer.Context) -> tuple[Any, IngestionService]:
+    """Open the current study and build an IngestionService bound to it."""
+    project_dir: Path = ctx.obj["project_dir"]
+    pctx = open_project(project_dir)
+    session = pctx.session()
+    audit = AuditService(session, pctx.project.id)
+    segmentation = SegmentationService(session)
+    file_store = FileStore(project_dir)
+    ingestion = IngestionService(session, file_store, audit, segmentation)
+    return pctx, ingestion
 
 
 @config_app.command("show")
@@ -155,6 +187,136 @@ def _parse_value(raw: str) -> Any:
         return float(raw)
     except ValueError:
         return raw
+
+
+@app.command()
+def init(
+    ctx: typer.Context,
+    name: Annotated[str, typer.Argument(help="Study name; creates ./NAME/.qualagent")],
+    pack: Annotated[
+        str | None,
+        typer.Option("--pack", help="Active methodology pack, e.g. thematic_analysis@1.0.0"),
+    ] = None,
+    study_root: Annotated[
+        Path | None,
+        typer.Option("--dir", help="Parent directory for the study (default: current dir)"),
+    ] = None,
+) -> None:
+    """Create a new study with database, files, and audit trail."""
+    from qualagent.services.project_service import ProjectService
+
+    root = study_root if study_root is not None else Path.cwd()
+    service = ProjectService(_registry())
+    try:
+        pctx = service.create(name, study_root=root, pack=pack)
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    as_json: bool = ctx.obj["json"]
+    if as_json:
+        console.print_json(
+            json.dumps(
+                {
+                    "project_id": pctx.project.id,
+                    "name": pctx.project.name,
+                    "path": str(pctx.project_dir),
+                }
+            )
+        )
+    else:
+        console.print(
+            f"[green]Created study[/green] [bold]{name}[/bold] "
+            f"(id {pctx.project.id}) at {pctx.project_dir}"
+        )
+        if pack:
+            console.print(f"  active pack: {pack}")
+
+
+@app.command("import")
+def import_(
+    ctx: typer.Context,
+    paths: Annotated[list[Path], typer.Argument(help="Files to import")],
+    strategy: Annotated[
+        str,
+        typer.Option("--strategy", help=f"Segmentation strategy: {', '.join(STRATEGIES)}"),
+    ] = "sentence",
+) -> None:
+    """Ingest files into the current study and segment them."""
+    if strategy not in STRATEGIES:
+        _fail(
+            ValidationError(f"Unknown strategy {strategy!r}; choose from {', '.join(STRATEGIES)}")
+        )
+    try:
+        pctx, ingestion = _ingestion(ctx)
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    as_json: bool = ctx.obj["json"]
+    results: list[dict[str, Any]] = []
+    with pctx.session() as _keepalive:  # keep engine alive during the loop
+        for path in paths:
+            try:
+                document, segments = ingestion.ingest_file(
+                    pctx.project.id,
+                    path,
+                    strategy=strategy,  # type: ignore[arg-type]
+                )
+            except QualAgentError as exc:
+                _fail(exc)
+                raise  # unreachable
+            results.append(
+                {
+                    "document_id": document.id,
+                    "filename": document.filename,
+                    "segment_count": len(segments),
+                }
+            )
+    if as_json:
+        console.print_json(json.dumps(results))
+    else:
+        for row in results:
+            console.print(
+                f"[green]imported[/green] {row['filename']} "
+                f"-> {row['document_id']} ({row['segment_count']} segments)"
+            )
+
+
+@app.command()
+def segment(
+    ctx: typer.Context,
+    document_id: Annotated[str, typer.Argument(help="Document to re-segment")],
+    strategy: Annotated[
+        str,
+        typer.Option("--strategy", help=f"Strategy: {', '.join(STRATEGIES)}"),
+    ] = "sentence",
+) -> None:
+    """Re-run segmentation on a document with a new strategy."""
+    if strategy not in STRATEGIES:
+        _fail(
+            ValidationError(f"Unknown strategy {strategy!r}; choose from {', '.join(STRATEGIES)}")
+        )
+    try:
+        pctx, ingestion = _ingestion(ctx)
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    with pctx.session() as _keepalive:
+        try:
+            segments = ingestion.resegment(document_id, strategy)  # type: ignore[arg-type]
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+    as_json: bool = ctx.obj["json"]
+    if as_json:
+        console.print_json(
+            json.dumps(
+                {"document_id": document_id, "strategy": strategy, "segment_count": len(segments)}
+            )
+        )
+    else:
+        console.print(
+            f"[green]re-segmented[/green] {document_id} with {strategy} -> {len(segments)} segments"
+        )
 
 
 if __name__ == "__main__":
