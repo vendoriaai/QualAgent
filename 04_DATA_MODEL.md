@@ -98,7 +98,7 @@ class MemoryItem(SQLModel, table=True):
 ```
 
 ### Audit event_type taxonomy
-`project.created`, `document.imported`, `document.resegmented`, `run.started`, `run.batch_completed`, `run.completed`, `run.failed`, `assignment.created`, `assignment.decision`, `codebook.created`, `codebook.refined`, `codebook.locked`, `code.created`, `code.updated`, `export.generated`, `llm.call` (prompt_hash, response_hash, model, tokens), `config.changed`.
+`project.created`, `project.deleted`, `document.imported`, `document.resegmented`, `run.started`, `run.batch_completed`, `run.completed`, `run.failed`, `assignment.created`, `assignment.decision`, `codebook.created`, `codebook.refined`, `codebook.locked`, `code.created`, `code.updated`, `export.generated`, `llm.call` (prompt_hash, response_hash, model, tokens), `config.changed`.
 
 ### Append-only enforcement (SQLite trigger)
 

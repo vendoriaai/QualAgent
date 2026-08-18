@@ -16,11 +16,11 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 1 — Domain Core & Storage (Tasks 1.1–1.5)
 
-- [ ] 1.1 Implement all SQLModel entities per 04_DATA_MODEL §1, including the append-only SQLite triggers on `auditevent`.
-- [ ] 1.2 `storage/db.py`: engine per project (`{project}/.qualagent/qualagent.db`, WAL mode), session factory, auto-create schema + triggers.
-- [ ] 1.3 `storage/files.py`: store original files under `{project}/.qualagent/files/{sha256}` with computed hashes.
-- [ ] 1.4 `domain/schemas.py`: all Pydantic schemas; LLM-facing schemas with `extra="forbid"`.
-- [ ] 1.5 `services/project_service.py` + `services/audit_service.py` (create/read only; helper `emit(event_type, payload)` used by all services).
+- [x] 1.1 Implement all SQLModel entities per 04_DATA_MODEL §1, including the append-only SQLite triggers on `auditevent`.
+- [x] 1.2 `storage/db.py`: engine per project (`{project}/.qualagent/qualagent.db`, WAL mode), session factory, auto-create schema + triggers.
+- [x] 1.3 `storage/files.py`: store original files under `{project}/.qualagent/files/{sha256}` with computed hashes.
+- [x] 1.4 `domain/schemas.py`: all Pydantic schemas; LLM-facing schemas with `extra="forbid"`.
+- [x] 1.5 `services/project_service.py` + `services/audit_service.py` (create/read only; helper `emit(event_type, payload)` used by all all services). *(plus storage/registry.py + runtime.py per ADR-004)*
 - **Acceptance:** unit tests pass for entity CRUD, trigger enforcement (UPDATE and DELETE on auditevent both raise), project create/list/delete emits audit events. Coverage ≥ 80% on touched modules.
 
 ## Phase 2 — Ingestion & Segmentation (Tasks 2.1–2.4)
