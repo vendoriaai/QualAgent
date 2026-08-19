@@ -80,5 +80,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
-- No child AGENTS.md files are needed for the current repository structure.
-- Root-owned files: `README.md`, `LICENSE`, `banner.jpg`, `video-thumbnail.jpg`, and root-level project documentation.
+- `qualagent/` — Core application package (AGENTS.md)
+- `tests/` — Test suite (AGENTS.md)
+- `docs/decisions/` — Architecture Decision Records (AGENTS.md)
+- Root-owned files: `README.md`, `LICENSE`, `banner.jpg`, `video-thumbnail.jpg`, `00_BUILDER_INSTRUCTIONS.md`, `01_PRD.md`, `02_TAD.md`, `03_API_SPEC.md`, `04_DATA_MODEL.md`, `05_IMPLEMENTATION_ROADMAP.md`, `06_README_DRAFT.md`, `pyproject.toml`
