@@ -59,6 +59,8 @@ dev = [
     "mypy>=1.10",
     "pre-commit>=3.7",
     "types-Pyyaml>=6.0",
+    "pandas-stubs>=2.2",
+    "types-reportlab>=4.0",
 ]
 
 [project.scripts]

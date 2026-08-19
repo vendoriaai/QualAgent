@@ -612,5 +612,236 @@ def packs_show(
             console.print(f"  - {path}")
 
 
+review_app = typer.Typer(help="Review AI assignments.", no_args_is_help=True)
+app.add_typer(review_app, name="review")
+irr_app = typer.Typer(help="Inter-rater reliability.", no_args_is_help=True)
+app.add_typer(irr_app, name="irr")
+export_app = typer.Typer(help="Export project artifacts.", no_args_is_help=True)
+app.add_typer(export_app, name="export")
+
+
+@review_app.command("list")
+def review_list(
+    ctx: typer.Context,
+    status: Annotated[str | None, typer.Option(help="pending|approved|rejected|edited")] = None,
+    code: Annotated[str | None, typer.Option(help="Filter by code name")] = None,
+    min_confidence: Annotated[float, typer.Option(help="Minimum confidence")] = 0.0,
+    max_confidence: Annotated[float, typer.Option(help="Maximum confidence")] = 1.0,
+    limit: Annotated[int, typer.Option(help="Page size")] = 20,
+    offset: Annotated[int, typer.Option(help="Page offset")] = 0,
+) -> None:
+    """List assignments for human review."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.review_service import ReviewService
+
+    with pctx.session() as session:
+        svc = ReviewService(session, AuditService(session, pctx.project.id))
+        try:
+            items, total = svc.list_items(
+                status=status,
+                code=code,
+                min_confidence=min_confidence,
+                max_confidence=max_confidence,
+                limit=limit,
+                offset=offset,
+            )
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+        if ctx.obj["json"]:
+            console.print_json(
+                json.dumps(
+                    {
+                        "total": total,
+                        "items": [
+                            {
+                                "assignment_id": it.assignment.id,
+                                "segment_id": it.assignment.segment_id,
+                                "code": it.code_name,
+                                "status": it.assignment.status,
+                                "confidence": it.assignment.confidence,
+                                "rationale": it.assignment.rationale,
+                                "segment_text": it.segment_text,
+                            }
+                            for it in items
+                        ],
+                    }
+                )
+            )
+        else:
+            table = Table(title=f"Assignments for review ({total} total)")
+            for col_name in ("id", "code", "status", "conf", "segment"):
+                table.add_column(col_name)
+            for it in items:
+                conf = f"{it.assignment.confidence:.2f}" if it.assignment.confidence else ""
+                text = it.segment_text.replace("\n", " ")[:40]
+                table.add_row(
+                    it.assignment.id[:8], it.code_name or "?", it.assignment.status, conf, text
+                )
+            console.print(table)
+
+
+def _review_service(
+    ctx: typer.Context, with_memory: bool
+) -> tuple[Any, Any, Any]:
+    """Open a ReviewService bound to the current study."""
+    pctx = open_project(ctx.obj["project_dir"])
+    session = pctx.session()
+    audit = AuditService(session, pctx.project.id)
+    memory = None
+    if with_memory:
+        from qualagent.services.memory_service import MemoryService
+
+        memory = MemoryService(session, pctx.project.id, pctx.project_dir, pctx.config)
+    from qualagent.services.review_service import ReviewService
+
+    return pctx, session, ReviewService(session, audit, memory)
+
+
+@review_app.command("decide")
+def review_decide(
+    ctx: typer.Context,
+    assignment_id: Annotated[str, typer.Argument(help="Assignment to decide")],
+    approve: Annotated[bool, typer.Option("--approve", help="Approve the assignment")] = False,
+    reject: Annotated[bool, typer.Option("--reject", help="Reject the assignment")] = False,
+    edit_code: Annotated[str | None, typer.Option(help="Reassign to this code")] = None,
+    note: Annotated[str, typer.Option(help="Reviewer note")] = "",
+) -> None:
+    """Record a human decision on one assignment (approve/reject/edit)."""
+    if sum(bool(x) for x in (approve, reject, edit_code)) != 1:
+        err_console.print("[red]error[/red] pick exactly one of --approve/--reject/--edit-code")
+        raise typer.Exit(code=3)
+    try:
+        pctx, session, svc = _review_service(ctx, with_memory=edit_code is not None)
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    try:
+        if approve:
+            row = svc.approve(assignment_id, note=note)
+        elif reject:
+            row = svc.reject(assignment_id, note=note)
+        elif edit_code is not None:
+            row = svc.edit_code(assignment_id, new_code_name=edit_code, note=note)
+        else:  # pragma: no cover - guarded above
+            raise ValidationError("no decision flag")
+        status, aid = row.status, row.id
+    except QualAgentError as exc:
+        session.close()
+        pctx.engine.dispose()
+        _fail(exc)
+        raise  # unreachable
+    session.close()
+    pctx.engine.dispose()
+    if ctx.obj["json"]:
+        console.print_json(json.dumps({"assignment_id": aid, "status": status}))
+    else:
+        console.print(f"[green]{status}[/green] assignment {aid[:8]}")
+
+
+@irr_app.command("compute")
+def irr_compute(
+    ctx: typer.Context,
+    subset: Annotated[str, typer.Option(help="verified")] = "verified",
+) -> None:
+    """Cohen's kappa, AI vs human, per code and overall."""
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.irr_service import IRRCalculator
+
+    with pctx.session() as session:
+        report = IRRCalculator(session).compute()
+        payload = {
+            "overall_kappa": report.overall_kappa,
+            "per_code": report.per_code,
+            "n_compared": report.n_compared,
+        }
+    if ctx.obj["json"]:
+        console.print_json(json.dumps(payload))
+    else:
+        console.print(f"overall kappa: [bold]{report.overall_kappa:.2f}[/bold]")
+        console.print(f"compared segments: {report.n_compared} ({subset})")
+        for name, value in report.per_code.items():
+            console.print(f"  {name}: {value:.2f}")
+
+
+@export_app.command("matrix")
+def export_matrix(
+    ctx: typer.Context,
+    out: Annotated[Path, typer.Option("--out", help="Output file")],
+    fmt: Annotated[str, typer.Option("--format", help="csv|xlsx")] = "csv",
+) -> None:
+    """Export the code x document frequency matrix."""
+    _run_export(ctx, "matrix", out, fmt)
+
+
+@export_app.command("codebook")
+def export_codebook(
+    ctx: typer.Context,
+    out: Annotated[Path, typer.Option("--out", help="Output file")],
+    fmt: Annotated[str, typer.Option("--format", help="md|pdf")] = "md",
+) -> None:
+    """Export the codebook document."""
+    _run_export(ctx, "codebook", out, fmt)
+
+
+@export_app.command("audit")
+def export_audit(
+    ctx: typer.Context,
+    out: Annotated[Path, typer.Option("--out", help="Output file")],
+    fmt: Annotated[str, typer.Option("--format", help="jsonl|pdf")] = "jsonl",
+) -> None:
+    """Export the full audit trail."""
+    _run_export(ctx, "audit", out, fmt)
+
+
+@export_app.command("methods")
+def export_methods(
+    ctx: typer.Context,
+    out: Annotated[Path, typer.Option("--out", help="Output file")],
+) -> None:
+    """Export the draft methods-section paragraph (MD)."""
+    _run_export(ctx, "methods", out, "md")
+
+
+def _run_export(ctx: typer.Context, kind: str, out: Path, fmt: str) -> None:
+    try:
+        pctx = open_project(ctx.obj["project_dir"])
+    except QualAgentError as exc:
+        _fail(exc)
+        raise  # unreachable
+    from qualagent.services.export_service import ExportService
+
+    with pctx.session() as session:
+        svc = ExportService(session, AuditService(session, pctx.project.id))
+        try:
+            if kind == "matrix":
+                exported = svc.export_matrix(out, fmt=fmt)
+            elif kind == "codebook":
+                exported = svc.export_codebook(out, fmt=fmt)
+            elif kind == "audit":
+                exported = svc.export_audit(out, fmt=fmt)
+            else:
+                exported = svc.export_methods(out)
+        except QualAgentError as exc:
+            _fail(exc)
+            raise  # unreachable
+    if ctx.obj["json"]:
+        console.print_json(
+            json.dumps(
+                {"kind": exported.kind, "format": exported.format, "path": str(exported.path)}
+            )
+        )
+    else:
+        console.print(f"[green]exported[/green] {exported.kind} -> {exported.path}")
+
+
 if __name__ == "__main__":
     app()

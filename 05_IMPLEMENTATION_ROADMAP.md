@@ -51,11 +51,11 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 5 — Review, IRR & Exports (Tasks 5.1–5.5)
 
-- [ ] 5.1 `services/review_service.py`: list with filters; `decide()` implements approve/reject/edit; edits write a `MemoryItem` (kind=correction) capturing old→new code + note.
-- [ ] 5.2 `services/irr_service.py`: Cohen's kappa per code and overall between AI assignments and human-approved/edited assignments (sklearn).
-- [ ] 5.3 `services/export_service.py`: all four exports per 04_DATA_MODEL §5. Methods-paragraph template includes pack citation, model, temperature, dates, counts, kappa, oversight statement.
-- [ ] 5.4 CLI: `review list/decide`, `irr compute`, `export *`.
-- [ ] 5.5 Export fidelity test: every example quote in exported codebook must appear at the recorded offsets in its source document (automated assertion — this is a headline feature).
+- [x] 5.1 `services/review_service.py`: list with filters; `decide()` implements approve/reject/edit; edits write a `MemoryItem` (kind=correction) capturing old→new code + note.
+- [x] 5.2 `services/irr_service.py`: Cohen's kappa per code and overall between AI assignments and human-approved/edited assignments (sklearn).
+- [x] 5.3 `services/export_service.py`: all four exports per 04_DATA_MODEL §5. Methods-paragraph template includes pack citation, model, temperature, dates, counts, kappa, oversight statement.
+- [x] 5.4 CLI: `review list/decide`, `irr compute`, `export *`.
+- [x] 5.5 Export fidelity test: every example quote in exported codebook must appear at the recorded offsets in its source document (automated assertion — this is a headline feature).
 - **Acceptance:** full CLI flow (import → code → review 10 assignments → irr → export all) runs in CI with fake LLM; fidelity test green.
 
 ## Phase 6 — Methodology Packs MP-1 & MP-2 (Tasks 6.1–6.3)
