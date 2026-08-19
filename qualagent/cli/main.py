@@ -685,9 +685,7 @@ def review_list(
             console.print(table)
 
 
-def _review_service(
-    ctx: typer.Context, with_memory: bool
-) -> tuple[Any, Any, Any]:
+def _review_service(ctx: typer.Context, with_memory: bool) -> tuple[Any, Any, Any]:
     """Open a ReviewService bound to the current study."""
     pctx = open_project(ctx.obj["project_dir"])
     session = pctx.session()
@@ -841,6 +839,20 @@ def _run_export(ctx: typer.Context, kind: str, out: Path, fmt: str) -> None:
         )
     else:
         console.print(f"[green]exported[/green] {exported.kind} -> {exported.path}")
+
+
+@app.command()
+def serve(
+    host: Annotated[str, typer.Option(help="Bind host")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Bind port")] = 8741,
+) -> None:
+    """Start the REST API server (03_API_SPEC section 3)."""
+    import uvicorn
+
+    from qualagent.api.app import app as api_app
+
+    console.print(f"[green]serving[/green] QualAgent API on http://{host}:{port}/docs")
+    uvicorn.run(api_app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":

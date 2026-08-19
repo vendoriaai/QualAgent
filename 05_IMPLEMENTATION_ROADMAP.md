@@ -67,8 +67,8 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 7 — REST API (Tasks 7.1–7.2)
 
-- [ ] 7.1 FastAPI app implementing every endpoint in 03_API_SPEC §3; routers thin over services; shared error handler mapping domain errors to the shared error object; OpenAPI at `/docs`.
-- [ ] 7.2 Contract tests with httpx TestClient covering every endpoint, including error paths (404s, locked codebook, remote gate).
+- [x] 7.1 FastAPI app implementing every endpoint in 03_API_SPEC §3; routers thin over services; shared error handler mapping domain errors to the shared error object; OpenAPI at `/docs`.
+- [x] 7.2 Contract tests with httpx TestClient covering every endpoint, including error paths (404s, locked codebook, remote gate).
 - **Acceptance:** `qualagent serve` boots; contract suite green; OpenAPI schema has no warnings.
 
 ## Phase 8 — MCP Server (Tasks 8.1–8.2)

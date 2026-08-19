@@ -85,13 +85,20 @@ class ProjectService:
         return open_project(Path(entry.path) / ".qualagent")
 
     def get_project_row(self, project_id: str) -> Project:
-        """Return the Project entity for a registered project."""
+        """Return the Project entity for a registered project.
+
+        The caller receives a detached row; the engine used to load it is
+        disposed here (Windows keeps SQLite files locked otherwise).
+        """
         ctx = self.open(project_id)
-        with ctx.session() as session:
-            project = session.get(Project, ctx.project.id)
-            if project is None:  # pragma: no cover - defensive
-                raise ProjectNotFound(f"Project row missing for {project_id}")
-            return project
+        try:
+            with ctx.session() as session:
+                project = session.get(Project, ctx.project.id)
+                if project is None:  # pragma: no cover - defensive
+                    raise ProjectNotFound(f"Project row missing for {project_id}")
+                return project
+        finally:
+            ctx.engine.dispose()
 
     def delete(self, project_id: str) -> None:
         """Delete a study: final audit event, registry removal, directory removal.
