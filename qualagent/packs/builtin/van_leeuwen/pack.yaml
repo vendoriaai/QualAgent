@@ -1,0 +1,132 @@
+name: van_leeuwen
+version: 1.0.0
+title: "Van Leeuwen Social Actor Representation"
+citation: "van Leeuwen, T. (2008). Discourse and Power: Representations of Social Actors. Palgrave Macmillan."
+multi_code: true
+unit: segment
+category_tree:
+  exclusion:
+    description: "Social actor omitted or backgrounded from the representation"
+    children:
+      suppression:
+        description: "No reference to the actor anywhere in the text; agency deleted"
+      backgrounding:
+        description: "Actor mentioned elsewhere in the text but absent from this clause"
+  inclusion:
+    description: "Social actor present in the representation"
+    children:
+      activation:
+        description: "Actor represented as active doer (agent of a material process)"
+      passivation:
+        description: "Actor represented as undergoing or receiving the action"
+        children:
+          subjection:
+            description: "Actor subjected to the action, treated as object or victim"
+          beneficialisation:
+            description: "Actor benefits from or is advantaged by the action"
+      genericisation:
+        description: "Actor represented as a class or group rather than specific individuals"
+      specification:
+        description: "Actor represented as specific, identifiable individuals"
+      individualisation:
+        description: "Actor represented as a unique individual, not as a group member"
+      assimilation:
+        description: "Actor represented as a mass or collective ('the workers', 'students')"
+        children:
+          aggregation:
+            description: "Actors quantified as statistics or masses"
+          collectivisation:
+            description: "Actors represented via a collective noun or institution"
+      nomination:
+        description: "Actor referred to by name or unique identity"
+      categorisation:
+        description: "Actor referred to via a category or role rather than a name"
+        children:
+          identification:
+            description: "Actor defined by what they are (age, gender, origin, etc.)"
+          functionalisation:
+            description: "Actor defined by what they do or their role (teacher, manager)"
+          appraisement:
+            description: "Actor evaluated or judged (the brave, the so-called experts)"
+      determination:
+        description: "Actor's identity fully specified in the text"
+      indetermination:
+        description: "Actor's identity left vague or unspecified ('someone', 'they')"
+      differentiation:
+        description: "Actor explicitly separated or distinguished from others"
+      abstraction:
+        description: "Actor referred to by an abstract quality or property instead of identity"
+coding_instructions: |
+  You are coding text using van Leeuwen's (2008) social actor representation
+  taxonomy. For each segment: (1) identify every social actor referenced,
+  including groups and institutions; (2) for each actor, decide exclusion
+  first (is the actor present in this segment at all?); (3) if present, apply
+  the decision questions in order - role (activation/passivation), then
+  generality (genericisation/specification), then identity (nomination/
+  categorisation subtypes); (4) assign the most specific applicable category
+  and record the exact actor span in actor_text; (5) an actor may attract
+  several categories (e.g. categorisation + functionalisation) - assign all
+  that apply; (6) mark segments with no social actors (pure description,
+  greetings, metadata) as uncodable.
+decision_questions:
+  - "Is the actor present in this segment? If not -> exclusion (suppression or backgrounding)."
+  - "Is the actor the grammatical or semantic agent of the main process? If yes -> activation; if undergoing -> passivation."
+  - "Is the actor represented as a class/group (genericisation) or as specific individuals (specification)?"
+  - "Is the actor named (nomination) or categorized (categorisation: identification / functionalisation / appraisement)?"
+  - "Is the actor's identity determined, indeterminate, or abstracted away?"
+output_schema:
+  type: object
+  required: [results]
+  properties:
+    results:
+      type: array
+      items:
+        type: object
+        required: [segment_id, assignments]
+        properties:
+          segment_id: {type: string}
+          assignments:
+            type: array
+            items:
+              type: object
+              required: [code, actor_text, rationale, confidence]
+              properties:
+                code: {type: string}
+                actor_text: {type: string}
+                rationale: {type: string}
+                confidence: {type: number, minimum: 0, maximum: 1}
+          uncodable: {type: boolean}
+    new_code_proposals:
+      type: array
+      items:
+        type: object
+        required: [name]
+        properties:
+          name: {type: string}
+          definition: {type: string}
+          example_segment_id: {type: string}
+few_shot_examples:
+  - input: "The teacher explained the grammar point to the class."
+    output:
+      - {code: "inclusion.activation", actor_text: "The teacher", rationale: "Agent of material process 'explained', categorized by role", confidence: 0.95}
+      - {code: "inclusion.passivation.beneficialisation", actor_text: "the class", rationale: "Beneficiary of the explaining process, genericised group", confidence: 0.85}
+      - {code: "inclusion.assimilation.collectivisation", actor_text: "the class", rationale: "Collective noun represents individual students as a mass", confidence: 0.8}
+  - input: "Patients were informed of the risks before surgery."
+    output:
+      - {code: "inclusion.passivation.subjection", actor_text: "Patients", rationale: "Subjected to 'were informed'; undergoer not agent; agent suppressed", confidence: 0.9}
+      - {code: "inclusion.genericisation", actor_text: "Patients", rationale: "Referred to as a general class, not specific people", confidence: 0.85}
+      - {code: "exclusion.suppression", actor_text: "", rationale: "The informing clinician is the agent but entirely unmentioned", confidence: 0.75}
+  - input: "Nurses like Maria Rodriguez work overnight shifts at County Hospital."
+    output:
+      - {code: "inclusion.nomination", actor_text: "Maria Rodriguez", rationale: "Full name gives unique identity within a genericised group", confidence: 0.95}
+      - {code: "inclusion.genericisation", actor_text: "Nurses", rationale: "Class reference 'nurses like...' genericises the profession", confidence: 0.85}
+      - {code: "inclusion.categorisation.functionalisation", actor_text: "Nurses", rationale: "Defined by occupation/role rather than identity", confidence: 0.9}
+  - input: "Someone must have left the door unlocked."
+    output:
+      - {code: "inclusion.indetermination", actor_text: "Someone", rationale: "Actor present but identity deliberately unspecified", confidence: 0.95}
+      - {code: "inclusion.activation", actor_text: "Someone", rationale: "Inferred agent of the material process 'left unlocked'", confidence: 0.8}
+  - input: "The elderly are often overlooked in urban planning decisions."
+    output:
+      - {code: "inclusion.categorisation.appraisement", actor_text: "The elderly", rationale: "Actor defined by an evaluated life-stage category", confidence: 0.9}
+      - {code: "inclusion.genericisation", actor_text: "The elderly", rationale: "Whole category as one generic mass, no individuals specified", confidence: 0.9}
+      - {code: "inclusion.passivation.subjection", actor_text: "The elderly", rationale: "'are overlooked' subjects the actor to others' inaction", confidence: 0.85}

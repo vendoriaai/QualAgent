@@ -1,0 +1,85 @@
+name: thematic_analysis
+version: 1.0.0
+title: "Thematic Analysis (Braun & Clarke 2006)"
+citation: "Braun, V., & Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101. https://doi.org/10.1191/1478088706qp063oa"
+multi_code: true
+unit: segment
+category_tree:
+  semantic:
+    description: "Codes capturing explicit, surface meanings of the data"
+    children:
+      experiential:
+        description: "Participants' accounts of what happened or what they did"
+      evaluative:
+        description: "Participants' appraisals, opinions, and judgments"
+  latent:
+    description: "Codes capturing underlying ideas, assumptions, and ideologies"
+    children:
+      ideational:
+        description: "Conceptualizations and belief systems underlying the account"
+      relational:
+        description: "How participants position themselves relative to others"
+  structural:
+    description: "Codes for how the account is organized rhetorically"
+    children:
+      narrative_arc:
+        description: "Story structure: situation, complication, resolution"
+      hedging:
+        description: "Mitigation, uncertainty, or distancing language"
+coding_instructions: |
+  You are performing Braun & Clarke's (2006) thematic analysis, phase 2
+  (generating initial codes). For each segment: (1) code the data exhaustively
+  but stay at code level (not theme level yet - themes emerge in the refine
+  pass, not here); (2) assign one or more short semantic labels (snake_case,
+  1-4 words) that capture both semantic and latent content where present;
+  (3) keep codes close to the data and consistent with the research question;
+  (4) propose a new code with a definition when the segment expresses an idea
+  the codebook does not yet capture; (5) mark uncodable segments (greeting,
+  off-topic, unintelligible) rather than forcing a code.
+decision_questions:
+  - "What is the explicit content of this segment (semantic level)?"
+  - "Is there an underlying assumption, idea, or positioning (latent level)?"
+  - "Which existing code captures this meaning most precisely?"
+  - "Does this segment require a new initial code rather than a forced fit?"
+  - "Is this segment substantive data, or noise (greeting/off-topic)?"
+output_schema:
+  type: object
+  required: [results]
+  properties:
+    results:
+      type: array
+      items:
+        type: object
+        required: [segment_id, assignments]
+        properties:
+          segment_id: {type: string}
+          assignments:
+            type: array
+            items:
+              type: object
+              required: [code, rationale, confidence]
+              properties:
+                code: {type: string}
+                rationale: {type: string}
+                confidence: {type: number, minimum: 0, maximum: 1}
+          uncodable: {type: boolean}
+    new_code_proposals:
+      type: array
+      items:
+        type: object
+        required: [name]
+        properties:
+          name: {type: string}
+          definition: {type: string}
+          example_segment_id: {type: string}
+few_shot_examples:
+  - input: "When the doctor told me the diagnosis, my whole world stopped for a moment."
+    output:
+      - {code: "evaluative.shock_response", rationale: "Metaphor 'world stopped' expresses acute emotional impact at disclosure", confidence: 0.9}
+      - {code: "structural.narrative_arc", rationale: "Marks the disclosure as a turning point in the illness narrative", confidence: 0.75}
+  - input: "I suppose the treatment is working, though it is hard to tell really."
+    output:
+      - {code: "evaluative.tentative_improvement", rationale: "Hedged positive appraisal of treatment effect ('I suppose', 'hard to tell')", confidence: 0.85}
+      - {code: "structural.hedging", rationale: "Explicit epistemic mitigation around the evaluation", confidence: 0.8}
+  - input: "Interviewer: So, shall we get started then?"
+    output: []

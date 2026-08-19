@@ -1,0 +1,66 @@
+{
+  "pack": "van_leeuwen@1.0.0",
+  "description": "Expert-coded fixture for social actor representation: expert_codes vs recorded model_codes (cassette replay).",
+  "segments": [
+    {
+      "id": "seg-01",
+      "text": "The minister announced the new education policy yesterday.",
+      "expert_codes": ["inclusion.activation", "inclusion.nomination"],
+      "model_codes": ["inclusion.activation", "inclusion.nomination"]
+    },
+    {
+      "id": "seg-02",
+      "text": "Teachers were not consulted about the changes.",
+      "expert_codes": ["inclusion.passivation.subjection", "inclusion.genericisation", "exclusion.suppression"],
+      "model_codes": ["inclusion.passivation.subjection", "inclusion.genericisation", "exclusion.suppression"]
+    },
+    {
+      "id": "seg-03",
+      "text": "Someone in the department leaked the draft to the press.",
+      "expert_codes": ["inclusion.indetermination", "inclusion.activation"],
+      "model_codes": ["inclusion.indetermination", "inclusion.activation"]
+    },
+    {
+      "id": "seg-04",
+      "text": "Dr. Chen and her colleagues welcomed the review.",
+      "expert_codes": ["inclusion.nomination", "inclusion.assimilation.collectivisation", "inclusion.categorisation.functionalisation"],
+      "model_codes": ["inclusion.nomination", "inclusion.assimilation.collectivisation", "inclusion.categorisation.functionalisation"]
+    },
+    {
+      "id": "seg-05",
+      "text": "The elderly received priority access to the vaccine.",
+      "expert_codes": ["inclusion.categorisation.appraisement", "inclusion.passivation.beneficialisation", "inclusion.genericisation"],
+      "model_codes": ["inclusion.categorisation.appraisement", "inclusion.passivation.beneficialisation", "inclusion.genericisation"]
+    },
+    {
+      "id": "seg-06",
+      "text": "Thousands of students signed the petition.",
+      "expert_codes": ["inclusion.assimilation.aggregation", "inclusion.activation"],
+      "model_codes": ["inclusion.assimilation.aggregation", "inclusion.activation"]
+    },
+    {
+      "id": "seg-07",
+      "text": "Local businesses benefited from the new foot traffic.",
+      "expert_codes": ["inclusion.passivation.beneficialisation", "inclusion.genericisation"],
+      "model_codes": ["inclusion.passivation.beneficialisation", "inclusion.genericisation"]
+    },
+    {
+      "id": "seg-08",
+      "text": "The report distinguishes international students from domestic ones.",
+      "expert_codes": ["inclusion.differentiation", "inclusion.genericisation"],
+      "model_codes": ["inclusion.differentiation"]
+    },
+    {
+      "id": "seg-09",
+      "text": "Interviewer: Can you tell me more about that?",
+      "expert_codes": [],
+      "model_codes": []
+    },
+    {
+      "id": "seg-10",
+      "text": "Vulnerability itself became the organizing principle of the response.",
+      "expert_codes": ["inclusion.abstraction"],
+      "model_codes": ["inclusion.abstraction"]
+    }
+  ]
+}

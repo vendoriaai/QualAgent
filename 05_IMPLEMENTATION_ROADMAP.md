@@ -60,9 +60,9 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 6 — Methodology Packs MP-1 & MP-2 (Tasks 6.1–6.3)
 
-- [ ] 6.1 Author `thematic_analysis` pack (Braun & Clarke 2006) with citation, decision questions, schema, 3 few-shots, golden fixture (expert-coded 12-segment transcript, reference kappa target ≥ 0.75).
-- [ ] 6.2 Author `van_leeuwen` pack with the full taxonomy tree (exclusion, activation, passivation [subjection, beneficialisation], genericisation/specification, individualisation/assimilation, nomination, categorisation [identification, functionalisation, appraisement], determination/indetermination, differentiation, etc.), `actor_text` span requirement, 5 few-shots, golden fixture.
-- [ ] 6.3 Golden fidelity tests for all three packs using recorded cassettes.
+- [x] 6.1 Author `thematic_analysis` pack (Braun & Clarke 2006) with citation, decision questions, schema, 3 few-shots, golden fixture (expert-coded 12-segment transcript, reference kappa target ≥ 0.75).
+- [x] 6.2 Author `van_leeuwen` pack with the full taxonomy tree (exclusion, activation, passivation [subjection, beneficialisation], genericisation/specification, individualisation/assimilation, nomination, categorisation [identification, functionalisation, appraisement], determination/indetermination, differentiation, etc.), `actor_text` span requirement, 5 few-shots, golden fixture.
+- [x] 6.3 Golden fidelity tests for all three packs using recorded cassettes.
 - **Acceptance:** `pytest tests/golden/` green; pack validation rejects a citation-less pack (negative test).
 
 ## Phase 7 — REST API (Tasks 7.1–7.2)

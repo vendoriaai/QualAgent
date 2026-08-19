@@ -1,0 +1,78 @@
+{
+  "pack": "thematic_analysis@1.0.0",
+  "description": "12-segment expert-coded transcript: student wellbeing during remote study. expert_codes are the human reference; model_codes are the recorded (cassette) model output used for replay.",
+  "segments": [
+    {
+      "id": "seg-01",
+      "text": "When the university moved everything online, I lost my whole routine overnight.",
+      "expert_codes": ["semantic.experiential", "structural.narrative_arc"],
+      "model_codes": ["semantic.experiential", "structural.narrative_arc"]
+    },
+    {
+      "id": "seg-02",
+      "text": "I stopped going to bed at a reasonable hour because there was no reason to get up.",
+      "expert_codes": ["semantic.experiential"],
+      "model_codes": ["semantic.experiential"]
+    },
+    {
+      "id": "seg-03",
+      "text": "Honestly, I think the online lectures were just as good, maybe even better for reviewing.",
+      "expert_codes": ["semantic.evaluative", "structural.hedging"],
+      "model_codes": ["semantic.evaluative", "structural.hedging"]
+    },
+    {
+      "id": "seg-04",
+      "text": "But you lose the corridor conversations, and that is where the real learning happened.",
+      "expert_codes": ["semantic.evaluative", "latent.relational"],
+      "model_codes": ["semantic.evaluative", "latent.relational"]
+    },
+    {
+      "id": "seg-05",
+      "text": "The university kept saying we were 'all in this together', which felt hollow to me.",
+      "expert_codes": ["latent.ideational", "semantic.evaluative"],
+      "model_codes": ["latent.ideational", "semantic.evaluative"]
+    },
+    {
+      "id": "seg-06",
+      "text": "Students are expected to just manage everything themselves now, as if we asked for this.",
+      "expert_codes": ["latent.ideational"],
+      "model_codes": ["latent.ideational"]
+    },
+    {
+      "id": "seg-07",
+      "text": "I started studying with a friend over video calls, and that held me together.",
+      "expert_codes": ["semantic.experiential", "latent.relational"],
+      "model_codes": ["semantic.experiential"]
+    },
+    {
+      "id": "seg-08",
+      "text": "My grades actually went up, though I cannot say I learned more.",
+      "expert_codes": ["semantic.evaluative", "structural.hedging"],
+      "model_codes": ["semantic.evaluative", "structural.hedging"]
+    },
+    {
+      "id": "seg-09",
+      "text": "Interviewer: How did the exams change?",
+      "expert_codes": [],
+      "model_codes": []
+    },
+    {
+      "id": "seg-10",
+      "text": "They became open-book, which rewarded people who were good at finding things fast.",
+      "expert_codes": ["semantic.evaluative"],
+      "model_codes": ["semantic.evaluative"]
+    },
+    {
+      "id": "seg-11",
+      "text": "In a way the pandemic exposed how fragile our support systems always were.",
+      "expert_codes": ["latent.ideational"],
+      "model_codes": ["latent.ideational", "structural.narrative_arc"]
+    },
+    {
+      "id": "seg-12",
+      "text": "I suppose we adapted, but I would not want to do it again.",
+      "expert_codes": ["semantic.evaluative", "structural.hedging"],
+      "model_codes": ["semantic.evaluative", "structural.hedging"]
+    }
+  ]
+}
