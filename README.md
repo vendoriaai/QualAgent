@@ -1,3 +1,7 @@
+<div align="center">
+
+<img src="logo.jpeg" alt="QualAgent logo" width="220">
+
 # QualAgent
 
 **Methodology-faithful AI agent for qualitative data analysis — with a full audit trail.**
@@ -11,6 +15,10 @@ Open-source, local-first alternative to NVivo's black-box AI: every code assignm
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)]()
 [![MCP](https://img.shields.io/badge/MCP-server-purple.svg)]()
+
+</div>
+
+---
 
 ## Why QualAgent?
 
