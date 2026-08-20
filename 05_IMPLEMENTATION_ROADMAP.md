@@ -73,8 +73,8 @@ Build strictly in phase order. Do not start a phase until every acceptance crite
 
 ## Phase 8 — MCP Server (Tasks 8.1–8.2)
 
-- [ ] 8.1 `mcp_server/server.py` with FastMCP: all 9 tools + 2 resources from 03_API_SPEC §4.
-- [ ] 8.2 Contract tests using the official MCP Python client over stdio.
+- [x] 8.1 `mcp_server/server.py` with FastMCP: all 9 tools + 2 resources from 03_API_SPEC §4.
+- [x] 8.2 Contract tests using the official MCP Python client over stdio.
 - **Acceptance:** server connects from a real MCP client (test with Claude Desktop config example in docs); tool suite green.
 
 ## Phase 9 — Packaging, Docs & Release (Tasks 9.1–9.5)

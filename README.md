@@ -50,18 +50,28 @@ qualagent code run --accept-remote   # explicit consent: data leaves your machin
 
 ## Use it from Claude (MCP)
 
+QualAgent ships an MCP server (`qualagent mcp`, stdio by default) exposing 9 tools
+and 2 resources so any MCP host can drive a study. Add it to your Claude Desktop
+config (or any MCP client) — it finds studies through the local registry:
+
 ```json
 {
   "mcpServers": {
     "qualagent": {
       "command": "qualagent",
-      "args": ["mcp", "--project-dir", "/path/to/my-study/.qualagent"]
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Then ask Claude: *"Code this excerpt with my study's codebook"* or *"Show me all pending assignments below 0.7 confidence."*
+Tools: `list_projects`, `get_codebook`, `code_segment`, `search_segments`,
+`get_assignments`, `submit_human_decision`, `get_audit_trail`, `compute_irr`,
+`propose_codes`. Resources: `qualagent://{project_id}/codebook` (JSON),
+`qualagent://{project_id}/audit` (JSONL).
+
+Then ask Claude: *"Code this excerpt with my study's codebook"* or *"Show me all
+pending assignments below 0.7 confidence."*
 
 ## Methodology Packs
 

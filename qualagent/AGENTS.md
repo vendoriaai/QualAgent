@@ -14,6 +14,7 @@ Core application package for QualAgent — a qualitative analysis platform with 
 - Public API surface: `qualagent.runtime` (Runtime class), `qualagent.config` (Config), `qualagent.domain` (models, schemas, errors)
 - Internal modules are not guaranteed stable across versions
 - Configuration via `qualagent.config.Config` (Pydantic Settings, env-file supported)
+- Interfaces are the same services across CLI, REST (`qualagent.api`), and MCP (`qualagent.mcp_server`); error semantics match 03_API_SPEC section 1
 
 ## Work Guidance
 
@@ -37,6 +38,7 @@ Core application package for QualAgent — a qualitative analysis platform with 
 - `cli/` — Typer CLI commands (AGENTS.md)
 - `domain/` — Domain models, schemas, errors (AGENTS.md)
 - `llm/` — LLM provider layer (AGENTS.md)
+- `mcp_server/` — MCP server (9 tools + 2 resources) (AGENTS.md)
 - `packs/` — Pack engine and builtin packs (AGENTS.md)
 - `services/` — Business logic services (AGENTS.md)
 - `storage/` — Database and file storage (AGENTS.md)

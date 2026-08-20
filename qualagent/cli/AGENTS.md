@@ -12,10 +12,13 @@ Command-line interface for QualAgent operations: project management, ingestion, 
 ## Local Contracts
 
 - Entry point: `qualagent.cli.main.app` (Typer instance)
-- Commands grouped: `project`, `ingest`, `code`, `review`, `export`, `irr`, `pack`
-- Uses `qualagent.runtime.Runtime` for service access
+- Commands grouped: `init`, `import`, `segment`, `code`, `codebook`, `review`,
+  `irr`, `export`, `packs`, `config`, `serve`, `mcp`
+- `serve` starts the REST API (03_API_SPEC section 3); `mcp` starts the MCP
+  server (03_API_SPEC section 4, `qualagent mcp --transport stdio|sse`)
+- Uses `qualagent.runtime.open_project` for service access
 - Output: human-readable tables (Rich) or JSON (`--json` flag)
-- Configuration via `qualagent.config.Config` (env vars, .env file)
+- Domain errors map to CLI exit codes per 03_API_SPEC section 2
 
 ## Work Guidance
 

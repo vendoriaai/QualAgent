@@ -28,7 +28,7 @@ from qualagent.domain.models import (
     utcnow_naive,
 )
 from qualagent.domain.schemas import CodingBatchResult
-from qualagent.llm.base import LLMProvider
+from qualagent.llm.base import LLMProvider, Message
 from qualagent.llm.structured import structured_call
 from qualagent.packs.engine import PackEngine
 from qualagent.packs.loader import Pack
@@ -171,6 +171,152 @@ class CodingService:
         """Decode a run's stats JSON."""
         return dict(json.loads(run.stats_json or "{}"))
 
+    def code_segment(
+        self,
+        project: Project,
+        pack: Pack,
+        *,
+        text: str,
+        speaker: str | None = None,
+    ) -> dict[str, Any]:
+        """Code one text snippet without persisting a document (MCP ``code_segment``).
+
+        The snippet is coded against the study's active codebook (created empty on
+        first use). Unlike :meth:`start_run`, nothing is written to the database —
+        no document, no segment, no persisted assignment. The call is still audited
+        (one ``llm.call`` per attempt from :func:`structured_call`, plus a
+        ``code_segment.adhoc`` summary event) so ad-hoc coding is traceable.
+
+        Args:
+            project: The study whose active codebook supplies code definitions.
+            pack: Loaded methodology pack used to render the prompt.
+            text: Ad-hoc text snippet to code.
+            speaker: Optional speaker label (interview turns).
+
+        Returns:
+            ``{"assignments": [{"code", "rationale", "confidence"}]}`` per
+            03_API_SPEC section 4.
+
+        Raises:
+            LLMValidationFailed: If structured output fails after the repair retry.
+        """
+        import hashlib
+
+        engine = PackEngine(pack)
+        book = self._codebooks.get_by_version(project.id, None) if self._codebooks else None
+        codes = self._codebooks.codes(book) if (self._codebooks and book is not None) else []
+        system_prompt = engine.render_system_prompt(codes)
+        user_prompt = engine.render_user_prompt([(self.AD_HOC_SEGMENT_ID, text, speaker)])
+        messages = [
+            Message(role="system", content=system_prompt),
+            Message(role="user", content=user_prompt),
+        ]
+        result, attempts = structured_call(
+            self._provider,
+            messages,
+            output_model=CodingBatchResult,
+            temperature=self._config.llm.temperature,
+            seed=self._config.llm.seed,
+            audit=self._audit,
+        )
+        seg_result = result.results[0] if result.results else None
+        assignments = [
+            {
+                "code": a.code,
+                "rationale": a.rationale,
+                "confidence": a.confidence,
+            }
+            for a in (seg_result.assignments if seg_result else [])
+        ]
+        self._audit.emit(
+            "ai",
+            "code_segment.adhoc",
+            {
+                "pack": pack.id,
+                "segment_text_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                "tokens": sum(a.get("tokens", 0) for a in attempts),
+                "n_assignments": len(assignments),
+            },
+        )
+        return {"assignments": assignments}
+
+    def propose_codes(
+        self,
+        project: Project,
+        pack: Pack,
+        *,
+        document_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Draft new codes from uncoded/flagged segments (MCP ``propose_codes``).
+
+        Gathers segments that have no AI assignment yet (optionally scoped to one
+        document), feeds them to the pack's open-coding prompt, and returns the
+        model's ``new_code_proposals`` as plain dicts. Proposed codes are NEVER
+        persisted: they are suggestions a human must promote via the codebook
+        refinement flow (builder rule: new-code proposals stay draft suggestions).
+
+        Args:
+            project: The study to scan.
+            pack: Loaded methodology pack (its open-coding instructions guide proposals).
+            document_id: Optionally restrict to one document.
+            limit: Maximum segments to consider.
+
+        Returns:
+            ``[{"name", "definition", "example_segment_id"}]`` per 03_API_SPEC §4.
+        """
+        segments = self._uncoded_segments(project.id, document_id, limit)
+        if not segments:
+            return []
+        engine = PackEngine(pack)
+        book = self._codebooks.get_by_version(project.id, None) if self._codebooks else None
+        codes = self._codebooks.codes(book) if (self._codebooks and book is not None) else []
+        system_prompt = engine.render_system_prompt(codes)
+        seg_triples = [
+            (seg.id, _slice_text(doc_text, seg), seg.speaker)
+            for seg, doc_text in zip(segments, self._doc_texts(segments), strict=True)
+        ]
+        user_prompt = (
+            engine.render_user_prompt(seg_triples)
+            + "\n\nFocus on `new_code_proposals`: suggest codes for themes these "
+            "segments cover that no existing codebook code captures. Leave "
+            "`results` minimal (it is allowed to be empty)."
+        )
+        messages = [
+            Message(role="system", content=system_prompt),
+            Message(role="user", content=user_prompt),
+        ]
+        result, attempts = structured_call(
+            self._provider,
+            messages,
+            output_model=CodingBatchResult,
+            temperature=self._config.llm.temperature,
+            seed=self._config.llm.seed,
+            audit=self._audit,
+        )
+        proposals = [
+            {
+                "name": p.name,
+                "definition": p.definition,
+                "example_segment_id": p.example_segment_id,
+            }
+            for p in result.new_code_proposals
+        ]
+        self._audit.emit(
+            "ai",
+            "propose_codes.run",
+            {
+                "pack": pack.id,
+                "n_segments": len(segments),
+                "n_proposals": len(proposals),
+                "tokens": sum(a.get("tokens", 0) for a in attempts),
+            },
+        )
+        return proposals
+
+    #: Placeholder segment id for ad-hoc coding (never persisted). 03_API_SPEC §4.
+    AD_HOC_SEGMENT_ID = "ad-hoc"
+
     # -- internals -----------------------------------------------------------
 
     def _run_batches(
@@ -225,6 +371,48 @@ class CodingService:
             stmt = stmt.where(col(Segment.document_id) == document_id)
         return list(self._session.exec(stmt))
 
+    def _uncoded_segments(
+        self, project_id: str, document_id: str | None, limit: int
+    ) -> list[Segment]:
+        """Segments with no AI assignment yet (03_API_SPEC §4 ``propose_codes``).
+
+        The product has no durable "flagged" flag on segments (run stats record
+        batch flags, not per-segment state), so "uncoded/flagged" is interpreted
+        as segments lacking any assignment — the segments a new code would cover.
+        """
+        stmt = (
+            select(Segment)
+            .join(Document, col(Segment.document_id) == col(Document.id))
+            .where(col(Document.project_id) == project_id)
+            .order_by(col(Document.imported_at), col(Segment.document_id), col(Segment.index))
+        )
+        if document_id is not None:
+            if self._session.get(Document, document_id) is None:
+                raise DocumentNotFound(f"Document {document_id} not found")
+            stmt = stmt.where(col(Segment.document_id) == document_id)
+        segments = list(self._session.exec(stmt))
+        if not segments:
+            return []
+        seg_ids = [s.id for s in segments]
+        coded_ids = set(
+            self._session.exec(
+                select(Assignment.segment_id).where(col(Assignment.segment_id).in_(seg_ids))
+            ).all()
+        )
+        return [s for s in segments if s.id not in coded_ids][:limit]
+
+    def _doc_texts(self, segments: list[Segment]) -> list[str]:
+        """Raw text for each segment's document, aligned to ``segments``."""
+        if not segments:
+            return []
+        doc_map = {
+            d.id: d.raw_text
+            for d in self._session.exec(
+                select(Document).where(col(Document.id).in_([s.document_id for s in segments]))
+            ).all()
+        }
+        return [doc_map.get(s.document_id, "") for s in segments]
+
     @staticmethod
     def _batch_segments(
         segments: list[Segment], max_count: int, token_budget: int
@@ -274,8 +462,6 @@ class CodingService:
             else []
         )
         user_prompt = engine.render_user_prompt(seg_triples, memories)
-        from qualagent.llm.base import Message
-
         messages = [
             Message(role="system", content=system_prompt),
             Message(role="user", content=user_prompt),

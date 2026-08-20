@@ -855,5 +855,21 @@ def serve(
     uvicorn.run(api_app, host=host, port=port, log_level="info")
 
 
+@app.command()
+def mcp(
+    transport: Annotated[
+        str, typer.Option("--transport", help="stdio (default) | sse")
+    ] = "stdio",
+    host: Annotated[str, typer.Option(help="SSE bind host")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="SSE bind port")] = 8742,
+) -> None:
+    """Start the MCP server (03_API_SPEC section 4)."""
+    from qualagent.mcp_server.server import main as mcp_main
+
+    if transport != "stdio":
+        console.print(f"[green]serving[/green] QualAgent MCP (SSE) on http://{host}:{port}")
+    mcp_main(transport=transport, host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

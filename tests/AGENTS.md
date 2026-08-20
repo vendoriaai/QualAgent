@@ -15,9 +15,11 @@ Automated verification for QualAgent: unit, integration, and golden tests.
 - `fixtures.py`: shared test data factories
 - `unit/`: isolated unit tests mirroring `qualagent/` structure
   - One test file per module under test
-- `integration/`: end-to-end tests via API and CLI
+- `integration/`: end-to-end tests via API, CLI, and MCP
   - `test_api_contract.py` — OpenAPI contract validation
   - `test_cli_*.py` — CLI command flows
+  - `test_mcp_contract.py` — MCP server over stdio (official MCP client; 9 tools + 2 resources)
+  - MCP test seam: `QUALAGENT_FAKE_CASSETTE` (fake LLM) + `QUALAGENT_FAKE_EMBEDDINGS` (deterministic embeddings) keep the suite offline
 - `golden/`: deterministic output tests for packs
   - `test_packs_golden.py` — compares pack outputs to recorded goldens
 - Run: `pytest tests/` (requires `.venv` with dev dependencies)

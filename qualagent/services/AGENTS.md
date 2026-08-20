@@ -16,13 +16,16 @@ Core business logic layer: project lifecycle, ingestion, segmentation, coding pi
   - `ProjectService` — CRUD for projects
   - `IngestionService` — document import, text extraction
   - `SegmentationService` — split documents into segments
-  - `CodingService` — apply codes to segments (LLM + human)
+  - `CodingService` — apply codes to segments (LLM + human); also `code_segment()`
+    (ad-hoc, not persisted) and `propose_codes()` (suggestions from uncoded segments)
+  - `SegmentSearchService` — semantic search over segments (cosine-ranked; embedder
+    injectable; used by MCP `search_segments`)
   - `CodebookService` — codebook CRUD, versioning, hierarchy
   - `ReviewService` — human review workflow
-  - `IRRService` — inter-rater reliability (Cohen's Kappa, Fleiss' Kappa)
-  - `ExportService` — CSV, JSON, Excel, CAQDAS formats
+  - `IRRCalculator` — inter-rater reliability (Cohen's kappa, AI vs human)
+  - `ExportService` — CSV, XLSX, PDF, MD, JSONL formats
   - `AuditService` — immutable audit log
-  - `MemoryService` — working memory for pack execution
+  - `MemoryService` — vector memory of corrections + definitions (ChromaDB)
 - Each service uses `qualagent.storage.db.Database` for persistence
 - Domain errors from `qualagent.domain.errors`
 
@@ -41,6 +44,7 @@ Core business logic layer: project lifecycle, ingestion, segmentation, coding pi
 - `pytest tests/unit/test_review.py`
 - `pytest tests/unit/test_irr_export.py`
 - `pytest tests/integration/test_cli_*.py`
+- `pytest tests/integration/test_mcp_contract.py`
 
 ## Child DOX Index
 
